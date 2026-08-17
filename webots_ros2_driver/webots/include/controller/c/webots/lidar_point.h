@@ -27,6 +27,11 @@ typedef struct {
   float z;
   int layer_id;
   float time;
+
+  unsigned char r;
+  unsigned char g;
+  unsigned char b;
+  unsigned char a;
 } WbLidarPoint;
 
 #endif /* WB_LIDAR_POINT_H */
