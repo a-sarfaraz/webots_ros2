@@ -16,6 +16,7 @@
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/point_field.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <webots/robot.h>
 
@@ -50,22 +51,14 @@ namespace webots_ros2_driver {
       mNode->create_publisher<sensor_msgs::msg::PointCloud2>(mTopicName + "/point_cloud", rclcpp::SensorDataQoS().reliable());
     mPointCloudMessage.header.frame_id = mFrameName;
     mPointCloudMessage.height = 1;
-    mPointCloudMessage.point_step = 20;
     mPointCloudMessage.is_dense = false;
-    mPointCloudMessage.fields.resize(3);
-    mPointCloudMessage.fields[0].name = "x";
-    mPointCloudMessage.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    mPointCloudMessage.fields[0].count = 1;
-    mPointCloudMessage.fields[0].offset = 0;
-    mPointCloudMessage.fields[1].name = "y";
-    mPointCloudMessage.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    mPointCloudMessage.fields[1].count = 1;
-    mPointCloudMessage.fields[1].offset = 4;
-    mPointCloudMessage.fields[2].name = "z";
-    mPointCloudMessage.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    mPointCloudMessage.fields[2].count = 1;
-    mPointCloudMessage.fields[2].offset = 8;
     mPointCloudMessage.is_bigendian = false;
+
+    // RGB-LiDAR:
+    // Explicitly expose XYZ + packed RGB in the ROS PointCloud2.
+    // This avoids coupling the ROS binary layout to sizeof(WbLidarPoint).
+    sensor_msgs::PointCloud2Modifier modifier(mPointCloudMessage);
+    modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
 
     if (mAlwaysOn) {
       wb_lidar_enable(mLidar, mPublishTimestepSyncedMs);
@@ -112,18 +105,68 @@ namespace webots_ros2_driver {
   }
 
   void Ros2Lidar::publishPointCloud() {
-    auto data = wb_lidar_get_point_cloud(mLidar);
-    if (data) {
-      mPointCloudMessage.header.stamp = mNode->get_clock()->now();
+    const WbLidarPoint *data =
+      wb_lidar_get_point_cloud(mLidar);
 
-      mPointCloudMessage.width = wb_lidar_get_number_of_points(mLidar);
-      mPointCloudMessage.row_step = 20 * wb_lidar_get_number_of_points(mLidar);
-      if (mPointCloudMessage.data.size() != mPointCloudMessage.row_step * mPointCloudMessage.height)
-        mPointCloudMessage.data.resize(mPointCloudMessage.row_step * mPointCloudMessage.height);
+    if (!data)
+      return;
 
-      memcpy(mPointCloudMessage.data.data(), data, mPointCloudMessage.row_step * mPointCloudMessage.height);
-      mPointCloudPublisher->publish(mPointCloudMessage);
+    const int numberOfPoints =
+      wb_lidar_get_number_of_points(mLidar);
+
+    mPointCloudMessage.header.stamp =
+      mNode->get_clock()->now();
+
+    sensor_msgs::PointCloud2Modifier modifier(
+      mPointCloudMessage);
+
+    modifier.resize(numberOfPoints);
+
+    sensor_msgs::PointCloud2Iterator<float> iterX(
+      mPointCloudMessage,
+      "x");
+
+    sensor_msgs::PointCloud2Iterator<float> iterY(
+      mPointCloudMessage,
+      "y");
+
+    sensor_msgs::PointCloud2Iterator<float> iterZ(
+      mPointCloudMessage,
+      "z");
+
+    sensor_msgs::PointCloud2Iterator<uint8_t> iterR(
+      mPointCloudMessage,
+      "r");
+
+    sensor_msgs::PointCloud2Iterator<uint8_t> iterG(
+      mPointCloudMessage,
+      "g");
+
+    sensor_msgs::PointCloud2Iterator<uint8_t> iterB(
+      mPointCloudMessage,
+      "b");
+
+    for (int i = 0;
+        i < numberOfPoints;
+        ++i,
+        ++iterX,
+        ++iterY,
+        ++iterZ,
+        ++iterR,
+        ++iterG,
+        ++iterB) {
+
+      *iterX = data[i].x;
+      *iterY = data[i].y;
+      *iterZ = data[i].z;
+
+      *iterR = data[i].r;
+      *iterG = data[i].g;
+      *iterB = data[i].b;
     }
+
+    mPointCloudPublisher->publish(
+      mPointCloudMessage);
   }
 
   void Ros2Lidar::publishLaserScan() {
