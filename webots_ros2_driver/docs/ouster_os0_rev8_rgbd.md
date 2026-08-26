@@ -1,8 +1,18 @@
 # Ouster OS0 Rev 8 RGBD LiDAR — Webots + ROS 2
 
-This project provides a Webots simulation model of an **Ouster OS0 Rev 8 RGBD LiDAR** with ROS 2 support.
+This project provides a Webots simulation model of an **Ouster OS0 Rev 8 RGBD LiDAR** with ROS 2 support, and it contains two seperate forks:
 
-The provided ROS integration exposes the LiDAR point cloud on:
+```text
+Modified Webots simulator:
+https://github.com/a-sarfaraz/webots
+branch: rgbd-lidar-r2025a
+
+Modified webots_ros2 integration:
+https://github.com/a-sarfaraz/webots_ros2
+branch: rgbd-lidar-r2025a
+```
+
+The ROS integration exposes the LiDAR point cloud on:
 
 ```text
 Topic: /lidar/point_cloud
@@ -288,20 +298,15 @@ mkdir -p ~/webots_ros2_ws/src
 cd ~/webots_ros2_ws/src
 ```
 
-Clone the `webots_ros2` repository containing the RGBD LiDAR ROS integration:
+Clone the `webots_ros2` fork containing the RGBD LiDAR ROS integration:
 
 ```bash
-git clone <WEBOTS_ROS2_REPOSITORY_URL>
+git clone \
+  --branch rgbd-lidar-r2025a \
+  --single-branch \
+  https://github.com/a-sarfaraz/webots_ros2.git
+
 cd webots_ros2
-git checkout rgbd-lidar-r2025a
-```
-
-Replace `<WEBOTS_ROS2_REPOSITORY_URL>` with the corresponding `webots_ros2` fork containing:
-
-```text
-RGBD PointCloud2 support in Ros2Lidar.cpp
-the Ouster reference launch file
-the ROSbot XL integration example
 ```
 
 Build the ROS 2 workspace:
