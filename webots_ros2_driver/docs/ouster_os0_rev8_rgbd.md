@@ -1,6 +1,23 @@
 # Ouster OS0 Rev 8 RGBD LiDAR — Webots + ROS 2
 
-This project provides a Webots simulation model of an **Ouster OS0 Rev 8 RGBD LiDAR** with ROS 2 support, and it contains two seperate forks:
+This project provides a Webots simulation model of an **Ouster OS0 Rev 8 RGBD LiDAR** with ROS 2 support. A ROSbot XL + Ouster OS0 Rev 8 reference integration is included.
+
+The reference ROS integration exposes:
+
+```text
+Topic: /lidar/point_cloud
+Type:  sensor_msgs/msg/PointCloud2
+Frame: lidar
+Fields: x, y, z, rgb
+```
+
+The cloud can be consumed directly by RViz, PCL, perception, mapping, and navigation pipelines. 
+
+---
+
+# Getting Started
+
+The complete RGBD LiDAR simulation uses two repositories:
 
 ```text
 Modified Webots simulator:
@@ -12,30 +29,11 @@ https://github.com/a-sarfaraz/webots_ros2
 branch: rgbd-lidar-r2025a
 ```
 
-The ROS integration exposes the LiDAR point cloud on:
+Both repositories are required for the complete Webots + ROS 2 integration. The instructions below assume **Ubuntu 22.04** with **ROS 2 Humble** is already installed.
 
-```text
-Topic: /lidar/point_cloud
-Type:  sensor_msgs/msg/PointCloud2
-Frame: lidar
-```
+## 1. Clone the Modified Webots Source
 
-The point cloud contains:
-
-```text
-x
-y
-z
-rgb
-```
-
-and can be consumed directly by RViz, PCL, perception, mapping, and navigation pipelines.
-
----
-
-# Getting Started
-
-Clone this fork directly on the RGBD LiDAR branch:
+From your home directory, clone the Webots fork directly on the RGBD LiDAR branch:
 
 ```bash
 git clone \
@@ -46,347 +44,206 @@ git clone \
   webots-rgb-lidar
 ```
 
-Enter the repository:
-
-```bash
-cd webots-rgb-lidar
-```
-
 If the repository was cloned without `--recurse-submodules`, initialize the Webots submodules manually:
 
 ```bash
+cd ~/webots-rgb-lidar
 git submodule update --init --recursive
 ```
 
-The RGBD LiDAR implementation is based on **Webots R2025a** and must currently be built from this source tree.
-
-Build Webots with:
-
-```bash
-make -j$(nproc)
-```
-
-After a successful build, start Webots with:
-
-```bash
-./webots
-```
-
-or open a specific world directly:
-
-```bash
-./webots path/to/world.wbt
-```
-
-For example:
-
-```bash
-./webots \
-  projects/samples/environments/indoor/worlds/break_room.wbt
-```
-
-At this point you have the modified Webots installation containing:
-
-```text
-Generic RGBD LiDAR
-Ouster OS0 Rev 8 model
-XYZ + RGB LiDAR point support
-RGB/range correspondence implementation
-```
-
-The following sections explain how to:
-
-1. choose or create a Webots environment,
-2. add your robot,
-3. mount the Ouster OS0 Rev 8,
-4. connect the robot to ROS 2,
-5. publish `/lidar/point_cloud`,
-6. configure TF and RViz.
-
----
-
-# Setting Up a Webots Simulation From Scratch
-
-A Webots simulation normally consists of:
-
-```text
-World (.wbt)
- ├── environment
- ├── robot
- └── sensors attached to the robot
-```
-
-The `.wbt` world describes the complete simulation scene.
-
-You can start from one of the existing Webots sample environments rather than building a world from scratch.
-
-For example:
-
-```text
-projects/samples/environments/indoor/worlds/
-projects/samples/environments/factory/worlds/
-```
-
-## Opening a World
-
-From the Webots source directory:
+The RGBD LiDAR implementation is based on **Webots R2025a** and must currently be built from this source tree. Build Webots from the repository root:
 
 ```bash
 cd ~/webots-rgb-lidar
+make -j$(nproc)
 ```
 
-Launch a world with:
+After a successful build, the modified Webots executable can be started with:
 
 ```bash
-./webots path/to/world.wbt
+cd ~/webots-rgb-lidar
+./webots
 ```
+---
+## 2. Set Up `webots_ros2`
 
-For example:
+Create the workspace, clone the modified ROS 2 integration, install dependencies, build it, and configure the environment:
 
 ```bash
-./webots \
-  projects/samples/environments/indoor/worlds/break_room.wbt
+mkdir -p ~/webots_ros2_ws/src
+cd ~/webots_ros2_ws/src
+
+git clone \
+  --branch rgbd-lidar-r2025a \
+  --single-branch \
+  https://github.com/a-sarfaraz/webots_ros2.git
+
+cd ~/webots_ros2_ws
+
+source /opt/ros/humble/setup.bash
+
+rosdep install \
+  --from-paths src \
+  --ignore-src \
+  -r \
+  -y
+
+colcon build --symlink-install
 ```
 
-You can then inspect the environment in the Webots GUI before adding the robot.
+Add the required environment setup to `~/.bashrc` so every new terminal is ready automatically:
+
+```bash
+cat >> ~/.bashrc <<'EOF'
+source /opt/ros/humble/setup.bash
+source ~/webots_ros2_ws/install/setup.bash
+export RGBD_WEBOTS_HOME=~/webots-rgb-lidar
+EOF
+
+source ~/.bashrc
+```
+Launch the ROSbot XL reference example with:
+
+```bash
+ros2 launch webots_ros2_husarion rosbot_xl_os0_launch.py
+```
 
 ---
 
 # Adding a Robot to the World
 
-Robots are usually defined using Webots PROTO files.
+For adding and configuring robots in Webots, refer to the official Webots documentation:
 
-For example, the ROSbot XL PROTO is:
+- [Webots Tutorials](https://cyberbotics.com/doc/guide/tutorials)
+- [Scene Tree and World Structure](https://cyberbotics.com/doc/guide/the-scene-tree)
+- [Creating and Using PROTO Nodes](https://cyberbotics.com/doc/guide/tutorial-7-your-first-proto)
 
-```text
-projects/robots/husarion/rosbot_xl/protos/RosbotXl.proto
-```
-
-Import the robot PROTO near the top of the world:
-
-```webots
-EXTERNPROTO "../../../../robots/husarion/rosbot_xl/protos/RosbotXl.proto"
-```
-
-The robot can be added as a
-**top-level node in the world**, alongside the other environment objects.
-
-```webots
-RosbotXl {
-  translation 0 0 0
-  rotation 0 0 1 0
-  name "rosbot_xl"
-}
-```
-For ROS integration, the robot should normally use:
-
-```webots
-controller "<extern>"
-```
-
-For example:
-
-```webots
-RosbotXl {
-  translation 0 0 0
-  rotation 0 0 1 0
-  name "rosbot_xl"
-  controller "<extern>"
-}
-```
-
-`<extern>` means that the robot controller will be provided externally by `webots_ros2_driver` rather than by a controller running directly inside Webots.
 
 ---
 
-# Adding the Ouster OS0 Rev 8
+# Adding an RGBD LiDAR
 
-The Ouster model is defined at:
+This project provides:
+
+- a generic `RgbdLidar`
+- an `OusterOS0Rev8` wrapper built on top of it
+
+## Generic RGBD LiDAR
+
+Defined at:
+
+```text
+projects/robots/generic/rgbd_lidar/protos/RgbdLidar.proto
+```
+
+Import and attach it to the robot:
+
+```webots
+EXTERNPROTO "../../../../robots/generic/rgbd_lidar/protos/RgbdLidar.proto"
+```
+
+Example:
+
+```webots
+lidarSlot [
+  RgbdLidar {
+    name "lidar"
+    horizontalResolution 1024
+    numberOfLayers 32
+  }
+]
+```
+
+Key parameters include:
+
+```text
+horizontalResolution
+fieldOfView
+verticalFieldOfView
+numberOfLayers
+minRange
+maxRange
+```
+
+## Ouster OS0 Rev 8
+
+The OS0 wrapper is defined at:
 
 ```text
 projects/robots/ouster/rev8/protos/OusterOS0Rev8.proto
 ```
 
-Import it into your world or robot PROTO:
+Import and attach it like the generic sensor:
 
 ```webots
 EXTERNPROTO "../../../../robots/ouster/rev8/protos/OusterOS0Rev8.proto"
 ```
 
-If your robot provides a LiDAR or sensor slot, place the sensor inside that slot.
-
-Example:
-
 ```webots
-RosbotXl {
-  translation 0 0 0
-  rotation 0 0 1 0
-  name "rosbot_xl"
-  controller "<extern>"
-
-  lidarSlot [
-    OusterOS0Rev8 {
-      translation 0 0 0.0225
-      name "os0"
-      lidarName "lidar"
-      horizontalResolution 2048
-      numberOfLayers 128
-    }
-  ]
-}
+lidarSlot [
+  OusterOS0Rev8 {
+    translation 0 0 0.0225
+    name "os0"
+    lidarName "lidar"
+    horizontalResolution 2048
+    numberOfLayers 128
+  }
+]
 ```
 
-For another robot, the exact field may not be called `lidarSlot`.
-
-Depending on the robot PROTO, the sensor may instead need to be added to:
-
-```text
-children
-sensorSlot
-lidarSlot
-topSlot
-```
-
-or another robot-specific extension field.
-
-The important requirement is that the `OusterOS0Rev8` becomes part of the robot's rigid body hierarchy.
-
----
-
-# Sensor Mounting
-
-Position the `OusterOS0Rev8` node at the desired mounting point on the robot.
-
-The PROTO already accounts for the OS0's internal LiDAR beam-origin offset of:
-
-```text
-0 0 0.040242 m
-```
-
-so this offset normally does not need to be added manually.
-
----
-
-# Choosing the LiDAR Resolution
+The OS0 wrapper uses the generic RGBD LiDAR implementation with OS0-specific geometry and sensor parameters.
 
 The OS0 wrapper defaults to:
-
 ```text
 Horizontal resolution: 1024
-Vertical layers:       128
+Vertical layers: 128
 ```
 
 The high-resolution configuration used during testing is:
 
 ```webots
 OusterOS0Rev8 {
-  horizontalResolution 2048
-  numberOfLayers 128
+horizontalResolution 2048
+numberOfLayers 128
 }
 ```
 
----
-
-# Setting Up `webots_ros2`
-
-The Webots simulator and the ROS 2 interface are maintained as separate source repositories.
-
-After building the modified Webots source tree, create a ROS 2 workspace:
-
-```bash
-mkdir -p ~/webots_ros2_ws/src
-cd ~/webots_ros2_ws/src
-```
-
-Clone the `webots_ros2` fork containing the RGBD LiDAR ROS integration:
-
-```bash
-git clone \
-  --branch rgbd-lidar-r2025a \
-  --single-branch \
-  https://github.com/a-sarfaraz/webots_ros2.git
-
-cd webots_ros2
-```
-
-Build the ROS 2 workspace:
-
-```bash
-cd ~/webots_ros2_ws
-
-source /opt/ros/humble/setup.bash
-
-colcon build --symlink-install
-```
-
-Source the workspace:
-
-```bash
-source /opt/ros/humble/setup.bash
-source ~/webots_ros2_ws/install/setup.bash
-```
-
-Point the ROS integration to the modified Webots build:
-
-```bash
-export RGBD_WEBOTS_HOME=~/webots-rgb-lidar
-```
-
-The ROSbot XL reference integration can then be launched with:
-
-```bash
-ros2 launch \
-  webots_ros2_husarion \
-  rosbot_xl_os0_launch.py
-```
+For robots without a `lidarSlot`, use the appropriate attachment field such as `children`, `sensorSlot`, or another robot-specific slot.
 
 ---
 
 # Connecting the Webots Robot to ROS 2
 
-Once the world contains:
-
-```text
-environment
-+
-robot
-+
-OusterOS0Rev8
-```
-
-the next step is to connect the robot to `webots_ros2`.
-
-The robot should have:
+To allow `webots_ros2_driver` to control the robot, configure the robot in the Webots world with:
 
 ```webots
-controller "<extern>"
+Robot {
+  name "my_robot"
+  controller "<extern>"
+}
 ```
 
-The ROS side then launches a `WebotsController` for that robot.
+`controller "<extern>"` tells Webots that the robot will be controlled by an external process rather than by a controller running inside Webots.
 
-The robot name used by the ROS controller must match the Webots robot name.
+On the ROS 2 side, `WebotsController` is the `webots_ros2_driver` process that connects to a specific robot in the running Webots simulation and exposes that robot's devices and control interface to ROS 2.
 
-For example:
+The `WebotsController` must target the same robot name used in the Webots world. For example:
 
 ```webots
-name "rosbot_xl"
+name "my_robot"
 ```
 
-should correspond to:
+must correspond to a `WebotsController` configured for:
 
 ```text
---robot-name=rosbot_xl
+my_robot
 ```
 
-in the ROS launch configuration.
+For the complete workflow, refer to the official ROS 2 Humble Webots tutorials:
 
-The public LiDAR topic exposed by the provided ROS integration is:
-
-```text
-/lidar/point_cloud
-```
-
-If the underlying driver initially publishes a robot-specific topic, remap it in the launch file to `/lidar/point_cloud`.
+- [Webots with ROS 2](https://docs.ros.org/en/humble/Tutorials/Advanced/Simulators/Webots.html)
+- [Setting up a Robot Simulation with Webots](https://docs.ros.org/en/humble/Tutorials/Advanced/Simulators/Webots/Setting-Up-Simulation-Webots-Basic.html)
+- [Advanced Webots ROS 2 Integration](https://docs.ros.org/en/humble/Tutorials/Advanced/Simulators/Webots/Setting-Up-Simulation-Webots-Advanced.html)
 
 ---
 
@@ -404,42 +261,36 @@ with message type:
 sensor_msgs/msg/PointCloud2
 ```
 
-The cloud contains:
+Each point contains:
 
 ```text
-x
-y
-z
-rgb
+x    FLOAT32   Cartesian X coordinate [m]
+y    FLOAT32   Cartesian Y coordinate [m]
+z    FLOAT32   Cartesian Z coordinate [m]
+rgb  FLOAT32   Packed RGB value
 ```
 
-The RGB field uses the standard packed ROS/PCL representation.
+The `rgb` field follows the standard ROS/PCL packed RGB representation. The red, green, and blue channels are packed into the bits of a 32-bit value and stored in the `PointCloud2` field as `FLOAT32`.
+
+This allows the cloud to be consumed directly by common ROS perception tools. For example:
+
+```text
+RViz        -> PointCloud2 display with Color Transformer = RGB8
+PCL         -> pcl::PointXYZRGB
+ROS nodes   -> read x, y, z and unpack rgb into individual R/G/B channels
+Mapping/CV  -> use XYZ for geometry and RGB for color, segmentation, or semantic processing
+```
+
+Conceptually, each point therefore represents:
+
+```text
+(x, y, z) + (r, g, b)
+```
+
+where the RGB value corresponds to the same simulated LiDAR sample as the XYZ measurement.
+
 ---
-
-# TF and RViz
-
-A typical TF tree is:
-
-```text
-map
- └── odom
-      └── base_link
-           └── lidar
-```
-
-The reference simulation currently uses Webots ground truth for:
-
-```text
-odom -> base_link
-```
-
-The LiDAR mounting transform remains:
-
-```text
-base_link -> lidar
-```
-
-## RViz
+# RViz
 
 Recommended configuration:
 
@@ -459,89 +310,22 @@ Color Transformer:
 RGB8
 ```
 
-If the cloud does not appear, first check:
-
-```bash
-ros2 topic info /lidar/point_cloud
-```
-
-Then check the TF chain:
-
-```bash
-ros2 run tf2_ros tf2_echo map lidar
-```
-
-Both the topic and a valid TF path must exist for RViz to display the cloud correctly.
-
 ---
 
 # Reference ROSbot XL Example
 
-A working reference integration is provided using:
+A working ROSbot XL + Ouster OS0 Rev 8 example is included.
 
-```text
-ROSbot XL
-+
-Ouster OS0 Rev 8
-+
-Webots environment
-+
-webots_ros2
-```
-
-The launch entry point is:
+Launch it with:
 
 ```bash
-ros2 launch \
-  webots_ros2_husarion \
-  rosbot_xl_os0_launch.py
-```
-This example should be treated as a template for integrating the sensor with another robot.
-
-The robot-specific parts are mainly:
-
-```text
-robot PROTO
-sensor mounting position
-robot_description
-ros2_control configuration
-base_link -> lidar TF
+ros2 launch webots_ros2_husarion rosbot_xl_os0_launch.py
 ```
 
-The LiDAR model and ROS point-cloud interface remain the same.
+Use this as a template for other robots. Only the robot-specific configuration needs to change, such as the robot model, sensor mounting, `ros2_control`, and `base_link -> lidar` TF.
 
----
+The RGBD LiDAR model and `/lidar/point_cloud` interface remain unchanged.
 
-# Verifying the Point Cloud
-
-Check that the topic exists:
-
-```bash
-ros2 topic info /lidar/point_cloud
-```
-
-Expected message type:
-
-```text
-sensor_msgs/msg/PointCloud2
-```
-Inspect the PointCloud2 fields:
-
-```bash
-ros2 topic echo \
-  /lidar/point_cloud \
-  --once \
-  --field fields
-```
-
-The cloud should contain at least:
-
-```text
-x
-y
-z
-rgb
-```
 ---
 # Important Files
 
