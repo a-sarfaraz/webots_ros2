@@ -11,7 +11,7 @@ Frame: lidar
 Fields: x, y, z, rgb
 ```
 
-The cloud can be consumed directly by RViz, PCL, perception, mapping, and navigation pipelines. 
+The cloud can be consumed directly by RViz, PCL, perception, mapping, and navigation pipelines.
 
 ---
 
@@ -29,7 +29,7 @@ https://github.com/a-sarfaraz/webots_ros2
 branch: rgbd-lidar-r2025a
 ```
 
-Both repositories are required for the complete Webots + ROS 2 integration. The instructions below assume **Ubuntu 22.04** with **ROS 2 Humble** is already installed.
+Both repositories are required for the complete Webots + ROS 2 integration. The instructions below assume **Ubuntu 22.04** with **ROS 2 Humble** already installed.
 
 ## 1. Clone the Modified Webots Source
 
@@ -51,20 +51,24 @@ cd ~/webots-rgb-lidar
 git submodule update --init --recursive
 ```
 
-The RGBD LiDAR implementation is based on **Webots R2025a** and must currently be built from this source tree. Build Webots from the repository root:
+The RGBD LiDAR implementation is based on **Webots R2025a** and must currently be built from this source tree.
+
+Build Webots from the repository root:
 
 ```bash
 cd ~/webots-rgb-lidar
 make -j$(nproc)
 ```
 
-After a successful build, the modified Webots executable can be started with:
+After a successful build, start the modified Webots executable with:
 
 ```bash
 cd ~/webots-rgb-lidar
 ./webots
 ```
+
 ---
+
 ## 2. Set Up `webots_ros2`
 
 Create the workspace, clone the modified ROS 2 integration, install dependencies, build it, and configure the environment:
@@ -95,6 +99,7 @@ Add the required environment setup to `~/.bashrc` so every new terminal is ready
 
 ```bash
 cat >> ~/.bashrc <<'EOF'
+
 source /opt/ros/humble/setup.bash
 source ~/webots_ros2_ws/install/setup.bash
 export RGBD_WEBOTS_HOME=~/webots-rgb-lidar
@@ -102,6 +107,7 @@ EOF
 
 source ~/.bashrc
 ```
+
 Launch the ROSbot XL reference example with:
 
 ```bash
@@ -118,7 +124,6 @@ For adding and configuring robots in Webots, refer to the official Webots docume
 - [Scene Tree and World Structure](https://cyberbotics.com/doc/guide/the-scene-tree)
 - [Creating and Using PROTO Nodes](https://cyberbotics.com/doc/guide/tutorial-7-your-first-proto)
 
-
 ---
 
 # Adding an RGBD LiDAR
@@ -130,19 +135,19 @@ This project provides:
 
 ## Generic RGBD LiDAR
 
-Defined at:
+The generic RGBD LiDAR model is defined in the modified Webots repository:
 
-```text
-projects/robots/generic/rgbd_lidar/protos/RgbdLidar.proto
-```
+[projects/robots/generic/rgbd_lidar/protos/RgbdLidar.proto](https://github.com/a-sarfaraz/webots/blob/rgbd-lidar-r2025a/projects/robots/generic/rgbd_lidar/protos/RgbdLidar.proto)
 
-Import and attach it to the robot:
+Import the PROTO near the top of your `.wbt` world file:
 
 ```webots
 EXTERNPROTO "../../../../robots/generic/rgbd_lidar/protos/RgbdLidar.proto"
 ```
 
-Example:
+The path is relative to the `.wbt` file; adjust it if your world is stored in a different directory.
+
+Then attach the sensor to the robot using an appropriate sensor field. For example:
 
 ```webots
 lidarSlot [
@@ -167,17 +172,19 @@ maxRange
 
 ## Ouster OS0 Rev 8
 
-The OS0 wrapper is defined at:
+The Ouster OS0 Rev 8 wrapper is defined in the modified Webots repository:
 
-```text
-projects/robots/ouster/rev8/protos/OusterOS0Rev8.proto
-```
+[projects/robots/ouster/rev8/protos/OusterOS0Rev8.proto](https://github.com/a-sarfaraz/webots/blob/rgbd-lidar-r2025a/projects/robots/ouster/rev8/protos/OusterOS0Rev8.proto)
 
-Import and attach it like the generic sensor:
+Import the PROTO near the top of your `.wbt` world file:
 
 ```webots
 EXTERNPROTO "../../../../robots/ouster/rev8/protos/OusterOS0Rev8.proto"
 ```
+
+Again, the path is relative to the location of your `.wbt` file.
+
+Attach the sensor to the robot:
 
 ```webots
 lidarSlot [
@@ -193,20 +200,7 @@ lidarSlot [
 
 The OS0 wrapper uses the generic RGBD LiDAR implementation with OS0-specific geometry and sensor parameters.
 
-The OS0 wrapper defaults to:
-```text
-Horizontal resolution: 1024
-Vertical layers: 128
-```
-
-The high-resolution configuration used during testing is:
-
-```webots
-OusterOS0Rev8 {
-horizontalResolution 2048
-numberOfLayers 128
-}
-```
+It defaults to `1024 × 128`; the validated high-resolution configuration uses `2048 × 128`.
 
 For robots without a `lidarSlot`, use the appropriate attachment field such as `children`, `sensorSlot`, or another robot-specific slot.
 
@@ -214,7 +208,7 @@ For robots without a `lidarSlot`, use the appropriate attachment field such as `
 
 # Connecting the Webots Robot to ROS 2
 
-To allow `webots_ros2_driver` to control the robot, configure the robot in the Webots world with:
+To allow `webots_ros2_driver` to control the robot, configure it in the Webots world with:
 
 ```webots
 Robot {
@@ -225,7 +219,7 @@ Robot {
 
 `controller "<extern>"` tells Webots that the robot will be controlled by an external process rather than by a controller running inside Webots.
 
-On the ROS 2 side, `WebotsController` is the `webots_ros2_driver` process that connects to a specific robot in the running Webots simulation and exposes that robot's devices and control interface to ROS 2.
+On the ROS 2 side, `WebotsController` is the `webots_ros2_driver` process that connects to a specific robot in the running Webots simulation and exposes its devices and control interface to ROS 2.
 
 The `WebotsController` must target the same robot name used in the Webots world. For example:
 
@@ -233,11 +227,7 @@ The `WebotsController` must target the same robot name used in the Webots world.
 name "my_robot"
 ```
 
-must correspond to a `WebotsController` configured for:
-
-```text
-my_robot
-```
+must correspond to a `WebotsController` configured for `my_robot`.
 
 For the complete workflow, refer to the official ROS 2 Humble Webots tutorials:
 
@@ -249,7 +239,7 @@ For the complete workflow, refer to the official ROS 2 Humble Webots tutorials:
 
 # ROS Interface
 
-The public LiDAR topic exposed by the provided ROS integration is:
+The reference integration exposes the LiDAR point cloud on:
 
 ```text
 /lidar/point_cloud
@@ -272,43 +262,40 @@ rgb  FLOAT32   Packed RGB value
 
 The `rgb` field follows the standard ROS/PCL packed RGB representation. The red, green, and blue channels are packed into the bits of a 32-bit value and stored in the `PointCloud2` field as `FLOAT32`.
 
-This allows the cloud to be consumed directly by common ROS perception tools. For example:
+This allows the cloud to be consumed directly by common ROS perception tools:
 
 ```text
 RViz        -> PointCloud2 display with Color Transformer = RGB8
 PCL         -> pcl::PointXYZRGB
-ROS nodes   -> read x, y, z and unpack rgb into individual R/G/B channels
-Mapping/CV  -> use XYZ for geometry and RGB for color, segmentation, or semantic processing
+ROS nodes   -> unpack rgb into individual R/G/B channels
+Mapping/CV  -> use XYZ for geometry and RGB for visual or semantic processing
 ```
 
-Conceptually, each point therefore represents:
+Conceptually, each point represents:
 
 ```text
 (x, y, z) + (r, g, b)
 ```
 
-where the RGB value corresponds to the same simulated LiDAR sample as the XYZ measurement.
+where RGB corresponds to the same simulated LiDAR sample as the XYZ measurement.
+
+For custom integrations, the underlying device topic may differ and can be remapped to the desired public topic.
 
 ---
+
 # RViz
 
-Recommended configuration:
+For the provided ROSbot XL reference example:
 
 ```text
 Fixed Frame: map
-
-Display:
-PointCloud2
-
-Topic:
-/lidar/point_cloud
-
-Position Transformer:
-XYZ
-
-Color Transformer:
-RGB8
+Display: PointCloud2
+Topic: /lidar/point_cloud
+Position Transformer: XYZ
+Color Transformer: RGB8
 ```
+
+For custom integrations, use any fixed frame with a valid TF path to `lidar`.
 
 ---
 
@@ -327,9 +314,12 @@ Use this as a template for other robots. Only the robot-specific configuration n
 The RGBD LiDAR model and `/lidar/point_cloud` interface remain unchanged.
 
 ---
+
 # Important Files
 
-Webots OS0 model:
+## Webots Fork
+
+Ouster OS0 model:
 
 ```text
 projects/robots/ouster/rev8/protos/OusterOS0Rev8.proto
@@ -360,6 +350,8 @@ RGB/range shaders:
 resources/wren/shaders/pack_rgb_range.frag
 resources/wren/shaders/merge_spherical_rgb_packed.frag
 ```
+
+## `webots_ros2` Fork
 
 ROS point-cloud publisher:
 
