@@ -71,7 +71,7 @@ cd ~/webots-rgb-lidar
 
 ## 2. Set Up `webots_ros2`
 
-Create the workspace, clone the modified ROS 2 integration, install dependencies, build it, and configure the environment:
+Create the workspace, clone the modified ROS 2 integration, initialize its submodules, install dependencies, and build:
 
 ```bash
 mkdir -p ~/webots_ros2_ws/src
@@ -82,8 +82,10 @@ git clone \
   --single-branch \
   https://github.com/a-sarfaraz/webots_ros2.git
 
-cd ~/webots_ros2_ws
+cd ~/webots_ros2_ws/src/webots_ros2
+git submodule update --init --recursive
 
+cd ~/webots_ros2_ws
 source /opt/ros/humble/setup.bash
 
 rosdep install \
@@ -95,7 +97,7 @@ rosdep install \
 colcon build --symlink-install
 ```
 
-Add the required environment setup to `~/.bashrc` so every new terminal is ready automatically:
+Add the environment setup to `~/.bashrc` so new terminals are configured automatically:
 
 ```bash
 cat >> ~/.bashrc <<'EOF'
@@ -113,7 +115,6 @@ Launch the ROSbot XL reference example with:
 ```bash
 ros2 launch webots_ros2_husarion rosbot_xl_os0_launch.py
 ```
-
 ---
 
 # Adding a Robot to the World
