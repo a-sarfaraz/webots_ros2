@@ -50,6 +50,12 @@ If the repository was cloned without `--recurse-submodules`, initialize the Webo
 cd ~/webots-rgb-lidar
 git submodule update --init --recursive
 ```
+Install the required OpenAL development dependency:
+
+```bash
+sudo apt update
+sudo apt install libopenal-dev
+```
 
 The RGBD LiDAR implementation is based on **Webots R2025a** and must currently be built from this source tree.
 
