@@ -268,19 +268,7 @@ This allows the cloud to be consumed directly by common ROS perception tools:
 RViz        -> PointCloud2 display with Color Transformer = RGB8
 PCL         -> pcl::PointXYZRGB
 ROS nodes   -> unpack rgb into individual R/G/B channels
-Mapping/CV  -> use XYZ for geometry and RGB for visual or semantic processing
 ```
-
-Conceptually, each point represents:
-
-```text
-(x, y, z) + (r, g, b)
-```
-
-where RGB corresponds to the same simulated LiDAR sample as the XYZ measurement.
-
-For custom integrations, the underlying device topic may differ and can be remapped to the desired public topic.
-
 ---
 
 # RViz
