@@ -299,22 +299,6 @@ For custom integrations, use any fixed frame with a valid TF path to `lidar`.
 
 ---
 
-# Reference ROSbot XL Example
-
-A working ROSbot XL + Ouster OS0 Rev 8 example is included.
-
-Launch it with:
-
-```bash
-ros2 launch webots_ros2_husarion rosbot_xl_os0_launch.py
-```
-
-Use this as a template for other robots. Only the robot-specific configuration needs to change, such as the robot model, sensor mounting, `ros2_control`, and `base_link -> lidar` TF.
-
-The RGBD LiDAR model and `/lidar/point_cloud` interface remain unchanged.
-
----
-
 # Important Files
 
 ## Webots Fork
